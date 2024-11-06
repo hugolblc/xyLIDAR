@@ -1,0 +1,455 @@
+---
+title: "extract_xy"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{extract_xy}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+editor_options:
+chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+```
+
+
+```{r setup}
+library(xyLIDAR)
+# library(BIOMASS)
+# library(plotsdatabase)
+# library(data.table)
+library(tidyverse)
+# library(grDevices)
+# library(sf)
+# library("xlsx")
+```
+
+Set the parameters 
+
+```{r}
+# Parameters ####
+
+root_in = "E:/VIA/scan_IPhone/mbalmayo001/" #path to the main folder of the lidar scans files
+plot_name = "mbalmayo001" # plotsdatabase format
+method = 'plotsdatabase' # Choose 'plotdatabase' or 'local_file'
+local_file = NULL # path to the local file inventory data
+crs = 'EPSG:32633'
+directory <- 'E:/VIA/scan_IPhone/outputs'
+
+dir.create(file.path(directory,plot_name))
+load(system.file(package="xyLIDAR", 'color_plot.RData') )
+```
+
+Import all the the lidar scan files within a list (list_of_Lidar). Each element corresponf to one file
+with 3 variables (id, X_lidar, Y_lidar)
+
+files_summary resumes the informations included in each files
+
+```{r}
+summary <- files_summary(root_in,
+                         export = TRUE, 
+                         directory = directory, 
+                         plot_name = plot_name)
+
+list_of_Lidar <- summary$list_of_Lidar
+files_summary <- summary$file_summary
+
+```
+
+
+Extract field data 
+
+```{r}
+Fieldplot_BDD_full <- import_plotdata(method,plot_name) # password : Amap2020, username : ploton
+```
+
+Compute jalons coordinates 
+
+```{r}
+subplot <- extract_jalons(coordinates = Fieldplot_BDD_full$coordinates)
+```
+
+Reproject trees using the jalons coordinates as reference 
+
+```{r}
+files_summary_jalon <- 
+   files_summary %>% 
+   filter(nb_jalon > 2)
+
+dir.create(file.path(directory,plot_name,"xy_rawdata_method1"))
+dir.create(file.path(directory,plot_name,"xy_reproject_method1"))
+
+for(i in 1:nrow(files_summary_jalon) ){
+   
+   file_info <- files_summary_jalon[i,]
+   
+   LIDAR_sousplot <- 
+      XY_computation(
+      Fieldplot_BDD_full,
+      list_of_Lidar,
+      plot_name,
+      file_info,
+      method = 'jalon',
+      directory)
+      
+      
+      assign(  paste("Reproj_XY_jalon", unique(LIDAR_sousplot$file), sep = "_"), LIDAR_sousplot )
+
+}
+
+list_of_objects <- mget(ls(pattern="Reproj_XY_jalon"))
+all_jalon_method <- do.call("rbind", list_of_objects)
+```
+
+Reproject trees using the jalons and the reprojected trees coordinates as reference 
+
+```{r}
+files_summary_trees <- 
+   files_summary %>% 
+   filter(nb_jalon < 3)
+
+dir.create(file.path(directory,plot_name,"xy_rawdata_method2"))
+dir.create(file.path(directory,plot_name,"xy_reproject_method2"))
+
+for(i in 1:nrow(files_summary_trees) ){
+   
+   file_info <- files_summary_trees[i,]
+   
+   LIDAR_sousplot <- 
+      XY_computation(
+      Fieldplot_BDD_full,
+      list_of_Lidar,
+      plot_name,
+      file_info,
+      method = 'tree',
+      directory)
+      
+      
+      assign(  paste("Reproj_XY_tree", unique(LIDAR_sousplot$file), sep = "_"), LIDAR_sousplot )
+
+}
+
+list_of_objects <- mget(ls(pattern="Reproj_XY_tree"))
+all_tree_method <- do.call("rbind", list_of_objects)
+
+```
+
+```{r}
+all <- rbind(all_jalon_method, all_tree_method)
+```
+
+Plot all trees
+
+```{r}
+
+sub_plot <- plot_alltrees(
+   Fieldplot_BDD_full,
+   all,
+   subplot,
+   crs)
+
+```
+
+
+```{r}
+save_gpkg(all, crs, sub_plot)
+```
+
+```{r}
+{
+   sink(file = paste0(plot_name,"/5_ALL_PLOT_REPORT.txt"))
+
+   all_missing_id <- unique(Fieldplot_BDD_full$extract$ind_num_sous_plot)[!(unique(Fieldplot_BDD_full$extract$ind_num_sous_plot) %in% unique(all$id))] %>% as.numeric %>% sort()
+   aa <- all %>% filter(where == 'in') %>% .[['id']] %>% unique()
+   all_missing_id_in <- unique(Fieldplot_BDD_full$extract$ind_num_sous_plot)[!(unique(Fieldplot_BDD_full$extract$ind_num_sous_plot) %in% aa)] %>% as.numeric %>% sort()
+
+
+   print(paste('                                                                    '))
+   print(paste('####################################################################'))
+   print(paste('                       MISSING ID IN THE SCAN                       '))
+   print(paste('####################################################################'))
+   print(paste('                                                                    '))
+
+
+   print(paste('The following id are not present on the scans :', paste(all_missing_id_in, collapse = ', ')))
+
+
+   print(paste('                                                                    '))
+   print(paste('####################################################################'))
+   print(paste('    MISSING ID IN THE SCAN AND THE SUBPLOT TO BE (RE)SCANNED        '))
+   print(paste('####################################################################'))
+   print(paste('                                                                    '))
+
+
+   print(Fieldplot_BDD_full$extract %>% filter(ind_num_sous_plot %in% all_missing_id_in) %>% group_by(sous_plot_name) %>%  summarise(id = paste(ind_num_sous_plot, collapse = ', ')))
+
+
+   print(paste('                                                                    '))
+   print(paste('####################################################################'))
+   print(paste('        MISSING ID CAN BE DUE TO THE FOLLOWING MISTAKE              '))
+   print(paste('####################################################################'))
+   print(paste('                                                                    '))
+
+   adjacent_error <- all %>% filter(where == 'adjacent')
+   out_error <- all %>% filter(where == 'out')
+
+   if(nrow(adjacent_error) > 0) {
+
+      for (i in 1:nrow(adjacent_error)) {
+
+         print(paste('In the file :', adjacent_error$file[i], ', the id', adjacent_error$id[i], ' is present but it is suppose to be on the adjacent subplot', adjacent_error$sous_plot_name[i]))
+
+      }
+   }
+
+   if(nrow(out_error) > 0) {
+
+      for (i in 1:nrow(out_error)) {
+
+         print(paste('In the file :', out_error$file[i], ', the id', out_error$id[i], ' is present but it is suppose to be on the another subplot which is not adjacent', out_error$sous_plot_name[i]))
+
+      }
+   }
+
+
+   print(paste('                                                                    '))
+   print(paste('####################################################################'))
+   print(paste('####################################################################'))
+   print(paste('                                                                    '))
+
+   duplicate_id_same_file <- all %>%
+      filter(duplicated_id == 'yes' & what == 'tree') %>%
+      group_by(id) %>%
+      summarise(file = unique(file),
+                n = n())
+
+   if (nrow(duplicate_id_same_file) > 0) {
+
+
+      for (i in 1:nrow(duplicate_id_same_file)){
+         print(paste('In the file :', duplicate_id_same_file$file[i], ', the id', duplicate_id_same_file$id[i], ' is present', duplicate_id_same_file$n[i], ' times'))
+
+      }
+
+
+   }
+
+   print(paste('                                                                    '))
+   print(paste('####################################################################'))
+   print(paste('                FILES WITH LESS THAN 3 REFERENCES                   '))
+   print(paste('####################################################################'))
+   print(paste('                                                                    '))
+
+   less_than_3_ref <- all %>%
+      group_by(file) %>%
+      slice(1) %>%
+      select(file, n_jalon_ref, n_tree_ref, n_tot_ref) %>%
+      filter(n_tot_ref < 3)
+
+   if (nrow(less_than_3_ref) > 0) {
+
+
+      for (i in 1:nrow(less_than_3_ref)){
+         print(paste('The file :', less_than_3_ref$file[i], 'has only', less_than_3_ref$n_tot_ref[i], ' reference(s)'))
+         print(paste('It has :', less_than_3_ref$n_jalon_ref[i], ' jalon(s)'))
+         print(paste('It has :', less_than_3_ref$n_tree_ref[i], ' tree(s)'))
+         print(paste('                                                                    '))
+
+      }
+
+
+   }
+
+   print(paste('                                                                    '))
+   print(paste('####################################################################'))
+   print(paste('                  FILES WITH LESS THAN 3 JALONS                     '))
+   print(paste('####################################################################'))
+   print(paste('                                                                    '))
+
+   less_than_3_jalon <- all %>%
+      group_by(file) %>%
+      slice(1) %>%
+      select(file, n_jalon_ref, n_tree_ref, n_tot_ref) %>%
+      filter(n_jalon_ref < 3)
+
+   if (nrow(less_than_3_jalon) > 0) {
+
+
+      for (i in 1:nrow(less_than_3_jalon)){
+         print(paste('The file :', less_than_3_jalon$file[i], 'has only', less_than_3_jalon$n_jalon_ref[i], ' jalon(s) as reference(s)'))
+         print(paste('It has :', less_than_3_jalon$n_jalon_ref[i], ' jalon(s)'))
+         print(paste('It has :', less_than_3_jalon$n_tree_ref[i], ' tree(s)'))
+         print(paste('                                                                    '))
+
+      }
+
+
+   }
+
+   sink(file =NULL)
+
+   print(paste('A report has been saved : ', paste0(getwd(), '/',plot_name,"/5_ALL_PLOT_REPORT.txt")))
+
+} # ALL SCANS REPORT
+```
+
+```{r}
+dir.create(paste0(plot_name,"/20_20_PROJECTION"))
+
+{
+
+   for (i in 1:length(unique(all$file))) {
+
+      tmp <- all %>% filter(file == unique(all$file)[i])
+      jalon_ref <- subplot %>% filter(sousplot == unique(tmp$sousplot))
+      jalon_ref <- jalon_ref[jalon_ref$jalon %in% tmp$id,]
+
+      jalon_ref <-jalon_ref %>% left_join(tmp %>% filter(what == 'jalon' & where == 'in' ) %>% select(-c("XAbs", "YAbs")), by = join_by(jalon == id))
+
+      res <-procrust(jalon_ref[,c("XRel", "YRel")], jalon_ref[,c("XAbs", "YAbs")])
+
+
+      coordAbs_allTrees <- as.matrix(tmp[,c("XAbs", "YAbs")]) %*% res$rotation
+      coordAbs_allTrees <- sweep(coordAbs_allTrees, 2, res$translation, FUN = "+")
+      tmp$TRUE_X <- coordAbs_allTrees[,1]
+      tmp$TRUE_Y <- coordAbs_allTrees[,2]
+
+      TRUE_XY <- tmp
+      assign(  paste("TRUE_XY_20_20", unique(TRUE_XY$file), sep = "_"), TRUE_XY )
+
+   }
+
+   list_of_objects <- mget(ls(pattern="TRUE_XY_20_20"))
+
+   # bind the elements together into a data frame
+
+   all <- do.call("rbind", list_of_objects)
+
+   all$quadrat_x <- as.numeric(str_split(all$sousplot, '_', simplify = TRUE)[,1])
+   all$quadrat_y <- as.numeric(str_split(all$sousplot, '_', simplify = TRUE)[,2])
+
+   all <- all %>%
+      mutate(TRUE_X = TRUE_X - quadrat_x,
+             TRUE_Y = TRUE_Y - quadrat_y) %>% print(n=100)
+
+   for (i in 1:length(unique(all$sousplot))){
+
+
+      tmp <- all %>% filter(sousplot == unique(all$sousplot)[i])
+
+      my_plot <- ggplot(tmp) +
+         ggrepel::geom_label_repel(aes(label = id,x=TRUE_X, y=TRUE_Y, col = where, fill = what), size = 5) +
+         scale_color_manual(values = c('in' = 'black', 'out' = 'red', 'adjacent' = 'orange')) +
+         scale_fill_manual(values = c('tree' = 'lightgreen', 'jalon' = 'white')) +
+         ggtitle(sousplot) +
+         theme_classic() +
+         theme(
+            panel.grid.major = element_line(colour = "black"),
+            panel.grid.minor  = element_line(colour = "white", linetype = "dotdash"),
+            panel.background = element_rect(fill = "black")) +
+         ggtitle(paste0('REPROJECTION FOR THE SUBPLOT :   ', unique(tmp$sousplot)))
+
+      png(paste0(plot_name,"/20_20_PROJECTION/",'20_20_PROJECTION_', str_remove(unique(tmp$file),'.csv'),'.png'), width = 600)
+      print(my_plot)
+      dev.off()
+   }
+} # REPROJECT TREES TO 20 20 coordinates
+
+dir.create(paste0(plot_name,"/Field_scan_comparison"))
+
+{
+   field_xy <- Fieldplot_BDD_full$extract %>%
+      filter((!(is.na(position_x)) & !(is.na(position_y)))) %>%
+      select(ind_num_sous_plot, position_x, position_y) %>%
+      rename(id = ind_num_sous_plot) %>%
+      mutate(id = as.character(id))
+
+   all <- all %>% left_join(field_xy)
+
+   all_comparison <- all %>% filter((!(is.na(position_x)) & !(is.na(position_y))) | what == 'jalon') %>% filter (sousplot == sous_plot_name)
+
+   for (i in 1:length(unique(all_comparison$sousplot))) {
+
+      tmp <- all_comparison %>%
+         group_by(id) %>%
+         arrange(match(method, c("method1", "method2")), .by_group = TRUE, across(starts_with("method2"))) %>%
+         slice(1) %>%
+         ungroup() %>%
+         filter (sousplot == unique(all_comparison$sousplot)[i])
+
+      tmp_tree <- tmp %>% filter(what == 'tree')
+      tmp_jalon <- tmp %>% filter(what == 'jalon')
+
+      my_plot <- ggplot() +
+         ggrepel::geom_label_repel(data = tmp_tree, aes(label = id,x=TRUE_X, y=TRUE_Y), size = 5, fill = 'blue', col = 'black') +
+         ggrepel::geom_label_repel(data = tmp_tree, aes(label = id,x=position_x, y=position_y), size = 5, fill = 'red', col = 'black') +
+         ggrepel::geom_label_repel(data = tmp_jalon, aes(label = id,x=TRUE_X, y=TRUE_Y), size = 5, fill = 'green', col = 'black') +
+         theme_classic() +
+         theme(
+            panel.grid.major = element_line(colour = "black"),
+            panel.grid.minor  = element_line(colour = "white", linetype = "dotdash"),
+            panel.background = element_rect(fill = "black")) +
+         ggtitle(
+            paste0('COMPARISON FIELD AND SCAN :   ', unique(tmp$sousplot)),
+            subtitle = 'green : jalon,  blue : LIDAR,   red : manual')
+
+      png(paste0(plot_name,"/Field_scan_comparison/",'Field_scan_comparison_', str_remove(unique(tmp$file),'.csv'),'.png'), width = 600)
+      print(my_plot)
+      dev.off()
+   }
+
+   } # XY compairison with field measurment
+
+{
+   write.xlsx(all, file = paste0(plot_name,"/20_20_PROJECTION.xlsx"), append = FALSE)
+} # Save 20_20 projection
+
+{
+   tmp <- all %>%
+      filter((!(is.na(position_x)) & !(is.na(position_y)))) %>%
+      filter(!is.nan(TRUE_X)) %>%
+      filter(sousplot == sous_plot_name)
+   x_field <- tmp %>% .[['position_x']] %>% as.numeric()
+   y_field <- tmp %>% .[['position_y']] %>% as.numeric()
+   x_LIDAR <- tmp %>% .[['TRUE_X']] %>% as.numeric()
+   y_LIDAR <- tmp %>% .[['TRUE_Y']] %>% as.numeric()
+
+   coord_field <- as.matrix(cbind(x_field,y_field))
+   coord_LIDAR <- as.matrix(cbind(x_LIDAR,y_LIDAR))
+
+   pt_field <-    st_cast(st_sfc(st_multipoint(coord_field)), "POINT")
+   pt_LIDAR <- st_cast(st_sfc(st_multipoint(coord_LIDAR)), "POINT")
+
+   distance <- st_distance(pt_field,pt_LIDAR, by_element = TRUE)
+
+   # hist(distance, xlab = 'Distance (m)', main = plot_name)
+
+   png(paste0(plot_name,"/distance_", plot_name,'.png'), width = 600)
+   hist(distance, breaks = c(0:45), xlab = 'Distance (m)', main = paste(plot_name, '  |  n = ', length(distance)))
+   dev.off()
+
+   tmp_dist <- tmp %>% mutate(distance = distance) %>% select(file, id, distance)
+
+   write.xlsx(tmp_dist, file = paste0(plot_name,"/distance.xlsx"), append = FALSE)
+
+
+} # Compute distance between field and scan measures
+```
+
+
+```{r}
+print(paste('plots have been saved in : '))
+print(paste0(getwd(),'/',plot_name,"/xy_rawdata_method1/"))
+print(paste0(getwd(),'/',plot_name,"/xy_reproject_method1/"))
+print('                                    ')
+print(paste('A report has been saved : ', paste0(getwd(), '/',plot_name,"/3_method1_report.txt")))
+
+
+
+```
+
