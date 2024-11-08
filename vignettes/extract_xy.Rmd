@@ -89,7 +89,6 @@ mapview(test3)%>%
 
 
 
-subplot <- subplot_recode(subplot)
 subplot_recode <- function(subplot) {
    subplot$jalon <- forcats::fct_recode(subplot$jalon,
                                   "0_0" = '100_0',
@@ -132,6 +131,9 @@ subplot_recode <- function(subplot) {
    
    return(subplot)
 }
+
+subplot <- subplot_recode(subplot)
+
 
 ```
 
@@ -363,7 +365,7 @@ save_gpkg(all, crs, sub_plot)
 ```
 
 ```{r}
-dir.create(paste0(plot_name,"/20_20_PROJECTION"))
+dir.create(paste0(directory,'/',plot_name,"/20_20_PROJECTION"))
 
 {
 
@@ -410,7 +412,7 @@ dir.create(paste0(plot_name,"/20_20_PROJECTION"))
          ggrepel::geom_label_repel(aes(label = id,x=TRUE_X, y=TRUE_Y, col = where, fill = what), size = 5) +
          scale_color_manual(values = c('in' = 'black', 'out' = 'red', 'adjacent' = 'orange')) +
          scale_fill_manual(values = c('tree' = 'lightgreen', 'jalon' = 'white')) +
-         ggtitle(sousplot) +
+         ggtitle(unique(tmp$sousplot)) +
          theme_classic() +
          theme(
             panel.grid.major = element_line(colour = "black"),
@@ -424,7 +426,7 @@ dir.create(paste0(plot_name,"/20_20_PROJECTION"))
    }
 } # REPROJECT TREES TO 20 20 coordinates
 
-dir.create(paste0(plot_name,"/Field_scan_comparison"))
+dir.create(paste0(directory,'/',plot_name,"/Field_scan_comparison"))
 
 {
    field_xy <- Fieldplot_BDD_full$extract %>%
@@ -435,7 +437,7 @@ dir.create(paste0(plot_name,"/Field_scan_comparison"))
 
    all <- all %>% left_join(field_xy)
 
-   all_comparison <- all %>% filter((!(is.na(position_x)) & !(is.na(position_y))) | what == 'jalon') %>% filter (sousplot == sous_plot_name)
+   all_comparison <- all %>% filter((!(is.na(position_x)) & !(is.na(position_y))) | what == 'jalon') 
 
    for (i in 1:length(unique(all_comparison$sousplot))) {
 
@@ -462,22 +464,22 @@ dir.create(paste0(plot_name,"/Field_scan_comparison"))
             paste0('COMPARISON FIELD AND SCAN :   ', unique(tmp$sousplot)),
             subtitle = 'green : jalon,  blue : LIDAR,   red : manual')
 
-      png(paste0(plot_name,"/Field_scan_comparison/",'Field_scan_comparison_', str_remove(unique(tmp$file),'.csv'),'.png'), width = 600)
+      png(paste0(directory,'/',plot_name,"/Field_scan_comparison/",'Field_scan_comparison_', str_remove(unique(tmp$file),'.csv'),'.png'), width = 600)
       print(my_plot)
       dev.off()
    }
 
    } # XY compairison with field measurment
 
+library(xlsx)
 {
-   write.xlsx(all, file = paste0(plot_name,"/20_20_PROJECTION.xlsx"), append = FALSE)
+   write.xlsx(all, file = paste0(directory,'/',plot_name,"/20_20_PROJECTION.xlsx"), append = FALSE)
 } # Save 20_20 projection
 
 {
    tmp <- all %>%
       filter((!(is.na(position_x)) & !(is.na(position_y)))) %>%
-      filter(!is.nan(TRUE_X)) %>%
-      filter(sousplot == sous_plot_name)
+      filter(!is.nan(TRUE_X))
    x_field <- tmp %>% .[['position_x']] %>% as.numeric()
    y_field <- tmp %>% .[['position_y']] %>% as.numeric()
    x_LIDAR <- tmp %>% .[['TRUE_X']] %>% as.numeric()
@@ -493,13 +495,13 @@ dir.create(paste0(plot_name,"/Field_scan_comparison"))
 
    # hist(distance, xlab = 'Distance (m)', main = plot_name)
 
-   png(paste0(plot_name,"/distance_", plot_name,'.png'), width = 600)
+   png(paste0(directory,'/',plot_name,"/distance_", plot_name,'.png'), width = 600)
    hist(distance, breaks = c(0:45), xlab = 'Distance (m)', main = paste(plot_name, '  |  n = ', length(distance)))
    dev.off()
 
    tmp_dist <- tmp %>% mutate(distance = distance) %>% select(file, id, distance)
 
-   write.xlsx(tmp_dist, file = paste0(plot_name,"/distance.xlsx"), append = FALSE)
+   write.xlsx(tmp_dist, file = paste0(directory,'/',plot_name,"/distance.xlsx"), append = FALSE)
 
 
 } # Compute distance between field and scan measures
@@ -512,6 +514,22 @@ print(paste0(getwd(),'/',plot_name,"/xy_rawdata_method1/"))
 print(paste0(getwd(),'/',plot_name,"/xy_reproject_method1/"))
 print('                                    ')
 print(paste('A report has been saved : ', paste0(getwd(), '/',plot_name,"/3_method1_report.txt")))
+
+
+
+```
+
+```{r}
+
+library(readxl)
+
+all <- read_xlsx(paste0(directory,'/',plot_name,"/20_20_PROJECTION.xlsx"))
+all <- all %>% 
+   filter(what == 'tree' & where == 'in') %>% 
+   group_by(id) %>% 
+   slice(1) %>% 
+   mutate(plot = "mbalmayo001") %>% 
+   select(id,TRUE_X,TRUE_Y) 
 
 
 
