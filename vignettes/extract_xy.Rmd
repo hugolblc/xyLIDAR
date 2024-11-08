@@ -73,6 +73,50 @@ Compute jalons coordinates
 
 ```{r}
 subplot <- extract_jalons(coordinates = Fieldplot_BDD_full$coordinates)
+subplot <- subplot_recode(subplot)
+subplot_recode <- function(subplot) {
+   subplot$sousplot <- forcats::fct_recode(subplot$jalon,
+                                  "0_0" = '100_0',
+                                  "20_0" = '80_0',
+                                  "40_0" = '60_0',
+                                  "60_0" = '40_0',
+                                  "80_0" = '20_0',
+                                  "100_0" = '0_0',
+                                  "0_20" = '100_20',
+                                  "20_20" = '80_20',
+                                  "40_20" = '60_20',
+                                  "60_20" = '40_20',
+                                  "80_20" = '20_20',
+                                  "100_20" = '0_20',
+                                  "0_40" = '100_40',
+                                  "20_40" = '80_40',
+                                  "40_40" = '60_40',
+                                  "60_40" = '40_40',
+                                  "80_40" = '20_40',
+                                  "100_40" = '0_40',
+                                  "0_60" = '100_60',
+                                  "20_60" = '80_60',
+                                  "40_60" = '60_60',
+                                  "60_60" = '40_60',
+                                  "80_60" = '20_60',
+                                  "100_60" = '0_60',
+                                  "0_80" = '100_80',
+                                  "20_80" = '80_80',
+                                  "40_80" = '60_80',
+                                  "60_80" = '40_80',
+                                  "80_80" = '20_80',
+                                  "100_80" = '0_80',
+                                  "0_100" = '100_100',
+                                  "20_100" = '80_100',
+                                  "40_100" = '60_100',
+                                  "60_100" = '40_100',
+                                  "80_100" = '20_100',
+                                  "100_100" = '0_100'
+   )
+   
+   return(subplot)
+}
+
 ```
 
 Reproject trees using the jalons coordinates as reference 
@@ -93,6 +137,7 @@ for(i in 1:nrow(files_summary_jalon) ){
       XY_computation(
       Fieldplot_BDD_full,
       list_of_Lidar,
+      subplot,
       plot_name,
       file_info,
       method = 'jalon',
