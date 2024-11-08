@@ -20,10 +20,11 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(xyLIDAR)
+library(tidyverse)
+
 # library(BIOMASS)
 # library(plotsdatabase)
 # library(data.table)
-library(tidyverse)
 # library(grDevices)
 # library(sf)
 # library("xlsx")
@@ -34,7 +35,7 @@ Set the parameters
 ```{r}
 # Parameters ####
 
-root_in = "E:/VIA/scan_IPhone/mbalmayo001/" #path to the main folder of the lidar scans files
+root_in = system.file(package="xyLIDAR", 'mbalmayo001') #path to the main folder of the lidar scans files
 plot_name = "mbalmayo001" # plotsdatabase format
 method = 'plotsdatabase' # Choose 'plotdatabase' or 'local_file'
 local_file = NULL # path to the local file inventory data
@@ -354,7 +355,7 @@ dir.create(paste0(plot_name,"/20_20_PROJECTION"))
             panel.background = element_rect(fill = "black")) +
          ggtitle(paste0('REPROJECTION FOR THE SUBPLOT :   ', unique(tmp$sousplot)))
 
-      png(paste0(plot_name,"/20_20_PROJECTION/",'20_20_PROJECTION_', str_remove(unique(tmp$file),'.csv'),'.png'), width = 600)
+      png(paste0(directory,'/',plot_name,"/20_20_PROJECTION/",'20_20_PROJECTION_', str_remove(unique(tmp$file),'.csv'),'.png'), width = 600)
       print(my_plot)
       dev.off()
    }

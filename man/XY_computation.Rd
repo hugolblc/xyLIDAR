@@ -9,7 +9,7 @@ XY_computation(
   list_of_Lidar,
   plot_name,
   file_info,
-  method,
+  method = "jalon",
   directory
 )
 }
