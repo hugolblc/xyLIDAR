@@ -26,3 +26,5 @@ Imports:
     plotsdatabase,
     sf,
     stringr
+URL: https://github.com/hugolblc/xyLIDAR
+BugReports: https://github.com/hugolblc/xyLIDAR/issues
