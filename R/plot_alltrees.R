@@ -16,7 +16,8 @@ plot_alltrees <-
       Fieldplot_BDD_full,
       all,
       subplot,
-      crs)
+      crs,
+      col)
 
       {
 

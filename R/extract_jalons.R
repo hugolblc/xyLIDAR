@@ -13,12 +13,10 @@
 
 extract_jalons <- function(coordinates){
 
-   Fieldplot_BDD = coordinates
-
    # Correct/adjust coordo
    correct_plot <- BIOMASS::correctCoordGPS(
-      longlat = Fieldplot_BDD[, c("typevalue_ddlon", "typevalue_ddlat")],
-      coordRel = Fieldplot_BDD[, c("Xrel", "Yrel")],
+      longlat = coordinates[, c("typevalue_ddlon", "typevalue_ddlat")],
+      coordRel = coordinates[, c("Xrel", "Yrel")],
       rangeX = c(0, 100),
       rangeY = c(0, 100),
       drawPlot = TRUE,

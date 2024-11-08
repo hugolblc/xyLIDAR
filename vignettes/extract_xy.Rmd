@@ -73,9 +73,25 @@ Compute jalons coordinates
 
 ```{r}
 subplot <- extract_jalons(coordinates = Fieldplot_BDD_full$coordinates)
+
+library(sf)
+test3 = subplot %>% 
+   st_as_sf(coords = c('XAbs', 'YAbs')) 
+test3 <- test3 
+library(mapview)
+mapview(test3)%>% 
+   leafem::addStaticLabels(label = test3$jalon,
+                           noHide = TRUE,
+                           direction = 'top',
+                           textOnly = TRUE,
+                           textsize = "20px")
+
+
+
+
 subplot <- subplot_recode(subplot)
 subplot_recode <- function(subplot) {
-   subplot$sousplot <- forcats::fct_recode(subplot$jalon,
+   subplot$jalon <- forcats::fct_recode(subplot$jalon,
                                   "0_0" = '100_0',
                                   "20_0" = '80_0',
                                   "40_0" = '60_0',
@@ -170,6 +186,7 @@ for(i in 1:nrow(files_summary_trees) ){
       XY_computation(
       Fieldplot_BDD_full,
       list_of_Lidar,
+      subplot,
       plot_name,
       file_info,
       method = 'tree',
@@ -197,7 +214,8 @@ sub_plot <- plot_alltrees(
    Fieldplot_BDD_full,
    all,
    subplot,
-   crs)
+   crs,
+   col)
 
 ```
 
