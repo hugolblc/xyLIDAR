@@ -22,6 +22,7 @@ XY_computation <-
    function(
       Fieldplot_BDD_full,
       list_of_Lidar,
+      subplot,
       plot_name,
       file_info,
       method ='jalon',
