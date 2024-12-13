@@ -74,7 +74,7 @@ XY_computation <-
       dplyr::filter (sous_plot_name %in% adjacent_sousplot) %>%
       .[['ind_num_sous_plot']]
 
-   if(file_info$scan_number == ''){
+   if(file_info$scan_number == '' | is.na(file_info$scan_number)){
 
       tmp <- list_of_Lidar[names(list_of_Lidar) == sousplot][[1]]
 

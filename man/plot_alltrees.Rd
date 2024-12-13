@@ -4,7 +4,7 @@
 \alias{plot_alltrees}
 \title{plot_alltrees}
 \usage{
-plot_alltrees(Fieldplot_BDD_full, all, subplot, crs)
+plot_alltrees(Fieldplot_BDD_full, all, subplot, crs, col)
 }
 \arguments{
 \item{crs}{}
