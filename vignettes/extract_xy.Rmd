@@ -21,13 +21,14 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(xyLIDAR)
 library(tidyverse)
-
-# library(BIOMASS)
+library(BIOMASS)
 # library(plotsdatabase)
-# library(data.table)
-# library(grDevices)
-# library(sf)
-# library("xlsx")
+library(data.table)
+library(grDevices)
+library(sf)
+library(xlsx)
+
+load(system.file(package="xyLIDAR", 'color_plot.RData') )
 ```
 
 Set the parameters 
@@ -35,15 +36,16 @@ Set the parameters
 ```{r}
 # Parameters ####
 
-root_in = system.file(package="xyLIDAR", 'mbalmayo001') #path to the main folder of the lidar scans files
-plot_name = "mbalmayo001" # plotsdatabase format
-method = 'plotsdatabase' # Choose 'plotdatabase' or 'local_file'
-local_file = NULL # path to the local file inventory data
-crs = 'EPSG:32633'
-directory <- 'E:/VIA/scan_IPhone/outputs'
+root_in = "D:/VIA/scan_IPhone/mbalmayo005" #path to the folder of the lidar scans files
+plot_name = "mbalmayo005" # plotsdatabase format
+method = 'local_file' # Choose 'plotdatabase' or 'local_file'
+crs = 'EPSG:32632'
+directory <- 'D:/VIA/scan_IPhone/outputs'
+```
 
+
+```{r}
 dir.create(file.path(directory,plot_name))
-load(system.file(package="xyLIDAR", 'color_plot.RData') )
 ```
 
 Import all the the lidar data files within a list (list_of_Lidar). Each element correspond to one file with 3 variables (id, X_lidar, Y_lidar)
@@ -52,13 +54,17 @@ files_summary resumes the informations included in each files. If the infomation
 are not well organized in the dataframe, it means that the file is not well named.
 
 ```{r}
-summary <- files_summary(root_in,
-                         export = TRUE, 
-                         directory = directory, 
+summary <- files_summary(root_in, 
+                         export = TRUE,
+                         directory = directory,
                          plot_name = plot_name)
 
 list_of_Lidar <- summary$list_of_Lidar
 files_summary <- summary$file_summary
+
+
+
+
 
 ```
 
@@ -67,104 +73,13 @@ Extract field data
 
 ```{r}
 Fieldplot_BDD_full <- import_plotdata(method,plot_name) # password : Amap2020, username : ploton
+Fieldplot_BDD_full <- mba_005
 ```
 
 Compute jalons coordinates 
 
 ```{r}
-subplot <- extract_jalons(coordinates = Fieldplot_BDD_full$coordinates)
-
-library(sf)
-test3 = subplot %>% 
-   st_as_sf(coords = c('XAbs', 'YAbs')) 
-test3 <- test3 
-library(mapview)
-mapview(test3)%>% 
-   leafem::addStaticLabels(label = test3$jalon,
-                           noHide = TRUE,
-                           direction = 'top',
-                           textOnly = TRUE,
-                           textsize = "20px")
-
-
-
-
-subplot_recode <- function(subplot) {
-   subplot$jalon <- forcats::fct_recode(subplot$jalon,
-                                  "0_0" = '100_0',
-                                  "20_0" = '80_0',
-                                  "40_0" = '60_0',
-                                  "60_0" = '40_0',
-                                  "80_0" = '20_0',
-                                  "100_0" = '0_0',
-                                  "0_20" = '100_20',
-                                  "20_20" = '80_20',
-                                  "40_20" = '60_20',
-                                  "60_20" = '40_20',
-                                  "80_20" = '20_20',
-                                  "100_20" = '0_20',
-                                  "0_40" = '100_40',
-                                  "20_40" = '80_40',
-                                  "40_40" = '60_40',
-                                  "60_40" = '40_40',
-                                  "80_40" = '20_40',
-                                  "100_40" = '0_40',
-                                  "0_60" = '100_60',
-                                  "20_60" = '80_60',
-                                  "40_60" = '60_60',
-                                  "60_60" = '40_60',
-                                  "80_60" = '20_60',
-                                  "100_60" = '0_60',
-                                  "0_80" = '100_80',
-                                  "20_80" = '80_80',
-                                  "40_80" = '60_80',
-                                  "60_80" = '40_80',
-                                  "80_80" = '20_80',
-                                  "100_80" = '0_80',
-                                  "0_100" = '100_100',
-                                  "20_100" = '80_100',
-                                  "40_100" = '60_100',
-                                  "60_100" = '40_100',
-                                  "80_100" = '20_100',
-                                  "100_100" = '0_100'
-   )
-   
-
-   
-   subplot$sousplot <- forcats::fct_recode(subplot$sousplot,
-                                  "80_0" = '0_0',
-                                  "60_0" = '20_0',
-                                  "40_0" = '40_0',
-                                  "20_0" = '60_0',
-                                  "0_0" = '80_0',
-                                  "80_20" = '0_20',
-                                  "60_20" = '20_20',
-                                  "40_20" = '40_20',
-                                  "20_20" = '60_20',
-                                  "0_20" = '80_20',
-                                  "80_40" = '0_40',
-                                  "60_40" = '20_40',
-                                  "40_40" = '40_40',
-                                  "20_40" = '60_40',
-                                  "0_40" = '80_40',
-                                  "80_60" = '0_60',
-                                  "60_60" = '20_60',
-                                  "40_60" = '40_60',
-                                  "20_60" = '60_60',
-                                  "0_60" = '80_60',
-                                  "80_80" = '0_80',
-                                  "60_80" = '20_80',
-                                  "40_80" = '40_80',
-                                  "20_80" = '60_80',
-                                  "0_80" = '80_80',
-   )
-      subplot$XRel <- as.numeric(str_split(subplot$jalon,'_',simplify = TRUE)[,1])
-   return(subplot)
-}
-
-subplot <- subplot_recode(subplot)
-
-
+subplot <- extract_jalons(coordinates = Fieldplot_BDD_full$coordinates, type = 2)
 ```
 
 Reproject trees using the jalons coordinates as reference 
