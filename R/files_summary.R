@@ -92,6 +92,10 @@ files_summary <- function(root_in, export = FALSE, directory = NULL, plot_name =
       sink(file= NULL)
    }
 
+   print(as.data.frame(file_summary) )
+   print(paste('A report has been saved : ', file.path(directory,plot_name,"1_check_files_basenames.txt") ))
+
    return(list(file_summary = file_summary,list_of_Lidar = list_of_Lidar))
+
 
 }

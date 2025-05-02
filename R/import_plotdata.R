@@ -14,11 +14,14 @@ import_plotdata <- function(method,plot_name){
    if(method == 'plotsdatabase') {
       Fieldplot_BDD_full = plotsdatabase::query_plots(plot_name = plot_name, show_all_coordinates = TRUE, map = F, extract_individuals = T)
       Tree_list <- Fieldplot_BDD_full$extract %>% dplyr::group_by(sous_plot_name) %>% dplyr::summarise (id = list(ind_num_sous_plot))
-   }
+
+      return(Fieldplot_BDD_full = Fieldplot_BDD_full)
+
+      }
 
    if(method == 'local_file') {
-      print("PLEASE IMPORT INVENTORY DATA BY OUR OWN, THE DATA MUST BE NAMED 'Tree_list' ")
+      a = "PLEASE IMPORT INVENTORY DATA BY OUR OWN, THE DATA MUST BE NAMED 'Tree_list' "
+      return(a)
    }
 
-   return(Fieldplot_BDD_full = Fieldplot_BDD_full)
-} # Import the data from the database or by your own (password : Amap2020, username : ploton)
+}
